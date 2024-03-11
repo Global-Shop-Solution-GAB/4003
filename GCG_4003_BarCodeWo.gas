@@ -1,0 +1,375 @@
+Program.Sub.ScreenSU.Start
+gui.Form1..create
+gui.Form1..caption("Barcode WO Report Generation")
+gui.Form1..size(6510,8280)
+gui.Form1..minx(0)
+gui.Form1..miny(0)
+gui.Form1..position(0,0)
+gui.Form1..event(unload,form1_unload)
+gui.Form1..alwaysontop(False)
+gui.Form1..fontname("Arial")
+gui.Form1..fontsize(8)
+gui.Form1..forecolor(0)
+gui.Form1..fontstyle(,,,,)
+gui.Form1..BackColor(-2147483633)
+gui.Form1..controlbox(True)
+gui.Form1..maxbutton(True)
+gui.Form1..minbutton(True)
+gui.Form1..mousepointer(0)
+gui.Form1..moveable(True)
+gui.Form1..sizeable(True)
+gui.Form1..ShowInTaskBar(True)
+gui.Form1..titlebar(True)
+gui.Form1.lblSequence.create(label,"Sequence",True,2205,345,1,3230,510,True,0,Arial,12,-2147483633,0)
+gui.Form1.lblSequence.fontstyle(True,False,False,False)
+gui.Form1.lblSequence.defaultvalue("")
+gui.Form1.lblSequence.controlgroup(0)
+gui.Form1.cmdPrint.create(button)
+gui.Form1.cmdPrint.caption("Print")
+gui.Form1.cmdPrint.visible(True)
+gui.Form1.cmdPrint.size(1200,525)
+gui.Form1.cmdPrint.zorder(0)
+gui.Form1.cmdPrint.position(365,6950)
+gui.Form1.cmdPrint.enabled(True)
+gui.Form1.cmdPrint.fontname("Arial")
+gui.Form1.cmdPrint.fontsize(8)
+gui.Form1.cmdPrint.event(click,cmdprint_click)
+gui.Form1.cmdPrint.defaultvalue("")
+gui.Form1.cmdPrint.controlgroup(0)
+gui.Form1.ddlSequence.create(dropdownlist)
+gui.Form1.ddlSequence.visible(True)
+gui.Form1.ddlSequence.size(2340,330)
+gui.Form1.ddlSequence.zorder(0)
+gui.Form1.ddlSequence.position(3200,800)
+gui.Form1.ddlSequence.enabled(True)
+gui.Form1.ddlSequence.fontname("Arial")
+gui.Form1.ddlSequence.fontsize(8)
+gui.Form1.ddlSequence.defaultvalue("")
+gui.Form1.ddlSequence.controlgroup(0)
+gui.Form1.gsfx.create(gsflexgrid)
+gui.Form1.gsfx.FixedRows(0)
+gui.Form1.gsfx.FixedCols(0)
+gui.Form1.gsfx.visible(True)
+gui.Form1.gsfx.size(2205,5850)
+gui.Form1.gsfx.zorder(0)
+gui.Form1.gsfx.position(370,790)
+gui.Form1.gsfx.enabled(True)
+gui.Form1.lbl2.create(label,"Suffix",True,1935,255,1,400,490,True,0,Arial,12,-2147483633,0)
+gui.Form1.lbl2.fontstyle(True,False,False,False)
+gui.Form1.lbl2.defaultvalue("")
+gui.Form1.lbl2.controlgroup(0)
+gui.Form1.gsfx.tabstop(True)
+gui.Form1.gsfx.tabindex(1)
+gui.Form1.ddlSequence.tabstop(True)
+gui.Form1.ddlSequence.tabindex(2)
+gui.Form1.cmdPrint.tabstop(True)
+gui.Form1.cmdPrint.tabindex(3)
+
+
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Variable.UDT.uSuff.Define("SUFFIX",Long,SUFFIX)
+Variable.UDT.uSuff.Define("JOB",String,JOB)
+Variable.UDT.uSuff.Define("ROUTER_SEQ",String,ROUTER_SEQ)
+Variable.UDT.uSuff.Define("BRUNID",Long)
+Variable.UDT.uSuff.Define("MACH",String,MACH)
+Variable.uGlobal.uSuff.Declare("uSuff")
+Variable.Global.iBIRunID.Declare(Long,0)
+Variable.Global.iLogID.Declare(Long,0)
+Variable.Global.uAssign.Declare(String)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'created: 3/4/15
+'coded by: WAW
+'This program allows for the selection of a specific sequence, for multiple suffixes of a range of workorders, to print
+'on the barcode work order report
+
+'declaration of variables
+V.Local.ISuffix.Declare(Long)
+V.Local.ISufTop.Declare(String)
+V.Local.ssql.Declare(String)
+V.Local.sjob.Declare(String)
+V.Local.sjobtitle.Declare(String)
+
+'open connection to the database
+F.ODBC.Connection!con.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+Function.Intrinsic.Control.CallSub(Buildstyle)
+F.Intrinsic.Control.CallSub(Upload)
+
+'F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4003_BarCodeWo.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Form1_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+program.sub.cmdprint_click.start
+F.Intrinsic.Control.SetErrorHandler("cmdprint_click_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.ssql.Declare(String)
+V.Local.sSeq.Declare(Long)
+V.Local.isuffcount.Declare(Long)
+V.Local.sparams.Declare(String)
+V.Local.svalues.Declare(String)
+V.Local.sret.Declare(Long)
+V.Local.irow.Declare(Long)
+V.Local.icount.Declare(Long)
+V.Local.sreport.Declare(String)
+V.Local.irptid.Declare(Long)
+V.Local.startingsuff.Declare(String)
+V.Local.srowz.Declare(String)
+V.local.SSUFFIX2.Declare(String)
+V.Local.SSUFFIX.Declare(String)
+V.Local.ESUFFIX.Declare(String)
+
+'check to make sure there has been a selection made from the drop down list
+'if no selection was made force the user to select one before continuing	
+F.Intrinsic.Control.If(V.Screen.Form1!ddlSequence.Text,=,"")
+	F.Intrinsic.UI.Msgbox("Please select a sequence")
+	F.Intrinsic.control.exitsub
+F.Intrinsic.Control.EndIf
+
+V.uGlobal.uSuff.Redim(-1,-1)
+
+'get the number of rows on the flexgrid
+V.Local.irow.Set(V.Screen.Form1!gsfx.Rows)
+'subtract from the count of the header row and the blank at the bottom
+F.Intrinsic.Math.Sub(V.Local.irow,1,V.local.irow)
+
+F.Intrinsic.Control.For(V.Local.icount,1,V.Local.irow,1)
+
+	'Goes through the flexgrid to see what the first, if any, items are checked then sets it to scheck
+	Gui.Form1.gsfx.GetTextMatrix(1,V.Local.icount,V.local.SSUFFIX)
+	'check to make sure the value is equal to 1 the first time around
+	F.Intrinsic.Control.If(V.local.SSUFFIX,=,1)
+'		v.local.SSUFFIX.Set(v.local.ESUFFIX)
+		Gui.Form1.gsfx.Gettextmatrix(0,V.Local.icount,V.local.ESUFFIX)
+		'set the value of scheck to be the first thing checked in the flexgrid
+		F.Intrinsic.String.Build("Select ROUTER_SEQ, MACH, SUFFIX from BI_BAR_DETAIL where ROUTER_SEQ = '{0}' and TERMINAL = '{1}' and LMO = '{2}' and SUFFIX between '{3}' and '{4}'",V.global.sseq(v.screen.form1!ddlsequence.ListIndex),V.Caller.Terminal,"L",V.local.SSUFFIX,V.local.ESUFFIX,V.Local.ssql)
+		F.ODBC.Connection!con.OpenRecordsetRO("rst",V.Local.ssql)
+		'close the connection to the database
+		F.ODBC.con!rst.Close
+		V.local.SSUFFIX.Set(V.local.ESUFFIX)
+	F.Intrinsic.Control.Else
+		Gui.Form1.gsfx.Gettextmatrix(0,V.Local.icount,V.local.ESUFFIX)
+		'set the value of scheck to be the first thing checked in the flexgrid
+			F.Intrinsic.String.Build("Select ROUTER_SEQ, MACH, SUFFIX from BI_BAR_DETAIL where ROUTER_SEQ = '{0}' and TERMINAL = '{1}' and LMO = '{2}' and SUFFIX between '{3}' and '{4}'",V.global.sseq(v.screen.form1!ddlsequence.ListIndex),V.Caller.Terminal,"L",V.local.SSUFFIX,V.local.ESUFFIX,V.Local.ssql)
+		F.ODBC.Connection!con.OpenRecordsetRO("rst",V.Local.ssql)
+		'close the connection to the database
+		F.ODBC.con!rst.Close
+	F.Intrinsic.Math.Add(V.Local.irow,1,V.Local.irow)
+	F.Intrinsic.Control.Next(V.Local.icount)
+F.Intrinsic.Control.EndIf
+
+'get the number of rows on the flexgrid
+V.Local.irow.Set(V.Screen.Form1!gsfx.Rows)
+'subtract from the count of the header row and the blank at the bottom
+F.Intrinsic.Math.Sub(V.Local.irow,1,V.local.irow)
+F.Intrinsic.Control.For(V.Local.icount,1,V.Local.irow,1)
+	'get starting suffix
+	Gui.Form1.gsfx.GetTextMatrix(1,V.Local.icount,V.Local.srowz)
+	F.Intrinsic.Control.If(V.Local.srowz,=,1)
+		Gui.Form1.gsfx.Gettextmatrix(0,V.Local.icount,V.local.ESUFFIX)
+		F.Intrinsic.String.Build("Select ROUTER_SEQ, MACH, SUFFIX from BI_BAR_DETAIL where ROUTER_SEQ = '{0}' and TERMINAL = '{1}' and LMO = '{2}' and SUFFIX between '{3}' and '{4}'",V.global.sseq(v.screen.form1!ddlsequence.ListIndex),V.Caller.Terminal,"L",V.local.SSUFFIX,V.local.ESUFFIX,V.Local.ssql)
+		F.ODBC.Connection!con.OpenRecordsetRO("rst",V.Local.ssql)
+		F.ODBC.con!rst.Close
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.Next(V.Local.icount)
+
+'sets the parameters
+V.Local.sparams.Set("SSUFFIX*!*ESUFFIX*!*Terminal*!*Sequence*!*COMMENTS*!*FGBAR*!*MATLBAR*!*OUTBAR*!*REPORTID")
+F.Intrinsic.String.Split(V.Local.sparams,"*!*",V.Local.sparams)
+'set the values
+F.Intrinsic.String.Build("{0}*!*{1}*!*{2}*!*{3}*!*{4}*!*{5}*!*{6}*!*{7}*!*001803",V.local.SSUFFIX,V.local.ESUFFIX,V.caller.terminal,V.global.sseq(v.Screen.Form1!ddlsequence.ListIndex),"1","Y","Y","Y",V.Local.svalues)
+F.Intrinsic.String.Split(V.Local.svalues,"*!*",V.local.svalues)
+
+F.Global.BI.GetIDFromName("\GCG_BarCodeWO.rpt",V.Local.irptid)
+'prints the report
+F.Global.BI.PrintReport(001803,0,V.Local.sparams,V.Local.svalues,"",False)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdprint_click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4003_BarCodeWo.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Form1_unload)
+Function.Intrinsic.Control.EndIf
+
+
+program.sub.cmdprint_click.end
+
+program.sub.form1_unload.start
+F.Intrinsic.Control.SetErrorHandler("form1_unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'closes the connection to the database
+F.ODBC.Connection!con.Close
+
+V.Passed.CANCEL.Set(1)
+
+'end the program
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("form1_unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4003_BarCodeWo.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+Function.Intrinsic.Control.EndIf
+
+
+program.sub.form1_unload.end
+
+Program.Sub.Buildstyle.Start
+F.Intrinsic.Control.SetErrorHandler("Buildstyle_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'make the flex grid not visible until all information has been loaded
+Gui.Form1.gsfx.Visible(false)
+
+'set the columns, rows, fixed rows and column percentages
+Gui.Form1.gsfx.Cols(2)
+Gui.Form1.gsfx.Rows(1)
+
+Gui.Form1.gsfx.FixedRows(1)
+Gui.Form1.gsfx.SetColumnPercentages(".50:.50")
+
+'suffix column
+Gui.Form1.gsfx.TextMatrix(0,0,"Suffix")
+Gui.Form1.gsfx.BuildStyle(1,0,"Type","Locked",True)
+Gui.Form1.gsfx.BuildStyle(1,0,"Format","Alignment",4)
+
+'checkbox column
+Gui.Form1.gsfx.TextMatrix(1,0,"Include")
+Gui.Form1.gsfx.BuildStyle(1,1,"Type","Checkbox",True)
+Gui.Form1.gsfx.BuildStyle(1,1,"Format","Alignment",4)
+
+'applies style to the first row
+Gui.Form1.gsfx.ApplyStyle(1,1)
+
+'applies style to second row
+Gui.Form1.gsfx.ApplyStyle(1,2)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Buildstyle_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4003_BarCodeWo.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Form1_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Buildstyle.End
+
+Program.Sub.Upload.Start
+F.Intrinsic.Control.SetErrorHandler("Upload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.ssql.Declare(String)
+V.Local.sjob.Declare(String)
+V.Local.sjobtitle.Declare(String)
+V.Local.isuffix.Declare(Long)
+V.Local.irow.Declare(Long)
+V.Local.irow2.Declare(Long)
+V.Local.sSeq.Declare(String)
+V.Local.sDesc.Declare(String)
+V.Local.sret.Declare(String)
+V.Local.iloop.Declare(Long)
+V.Local.icount.Declare(Long)
+V.Local.smach.Declare(String)
+V.Global.sseq.Declare(String)
+
+V.global.sRptid.declare(String)
+
+'select and sets sjob to be later used for sequence and suffix select statements
+F.Intrinsic.String.Build("select distinct JOB from BI_BAR_HEAD where TERMINAL= '{0}'",V.Caller.Terminal,V.Local.ssql)
+F.ODBC.Connection!con.OpenRecordsetRO("rst",V.Local.ssql)
+	F.Intrinsic.Control.If(V.ODBC.con!rst.EOF,=,False)
+		V.Local.sjob.Set(V.ODBC.con!rst.FieldValTrim!JOB)
+		Gui.Form1..Caption(V.Local.sjobtitle)
+	F.Intrinsic.Control.EndIf
+F.ODBC.con!rst.Close
+
+'selects suffix based on job and LMO
+F.Intrinsic.String.Build("select distinct SUFFIX from BI_BAR_DETAIL where TERMINAL = '{0}' and JOB = '{1}' and LMO='L' order by SUFFIX",V.caller.terminal,V.local.sjob,V.local.ssql)
+F.ODBC.Connection!con.OpenLocalRecordsetRO("rst",V.Local.ssql)
+	F.Intrinsic.Control.DoUntil(V.ODBC.con!rst.EOF,=,True)
+		F.odbc.con!rst.MoveNext
+		Gui.Form1.gsfx.LoadRecordset("con!rst",1)
+	F.Intrinsic.Control.Loop
+F.ODBC.con!rst.Close
+
+'selects the router sequence, machine and extra description based on terminal, job and LMO
+F.Intrinsic.String.Build("select distinct ROUTER_SEQ, MACH, EXTRA_DESC from BI_BAR_DETAIL where TERMINAL = '{0}' and JOB = '{1}' and LMO = 'L' order by ROUTER_SEQ",V.caller.Terminal,V.Local.sjob,V.Local.ssql)
+F.ODBC.Connection!con.OpenRecordsetRO("rst",V.Local.ssql)
+F.Intrinsic.Control.If(V.ODBC.con!rst.EOF,=,False)
+	F.Intrinsic.Control.DoUntil(V.ODBC.con!rst.EOF,=,True)
+		'set the values of the sequence and description for the drop down list
+		V.Local.sSeq.Set(V.ODBC.con!rst.FieldValTrim!ROUTER_SEQ)
+		V.Local.sDesc.Set(V.ODBC.con!rst.FieldValTrim!EXTRA_DESC)
+		'put the sequence and description together separated by a "--"
+		F.Intrinsic.String.Concat(V.Local.sSeq," -- ",V.Local.sDesc,V.Local.sret)
+		Gui.Form1.ddlSequence.AddItem(V.Local.sret)
+	'if the global.sseq is blank set sseq equal to router sequence
+	F.Intrinsic.Control.If(V.Global.sseq,=,"")
+		V.Global.sseq.Set(V.ODBC.con!rst.FieldValTrim!ROUTER_SEQ)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Build("{0}*!*{1}",V.Global.sseq,V.ODBC.con!rst.FieldValTrim!ROUTER_SEQ,V.Global.sseq)
+	F.Intrinsic.Control.EndIf
+	'move to the next record
+	F.ODBC.con!rst.MoveNext
+	F.Intrinsic.Control.Loop
+F.Intrinsic.control.EndIf
+
+'close the connection to recordset
+F.ODBC.con!rst.Close
+
+F.Intrinsic.String.Split(V.Global.sseq,"*!*",V.Global.sseq)
+
+'make the form and flexgrid visible
+Gui.Form1..Show
+Gui.Form1.gsfx.Visible(true)
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Upload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4003_BarCodeWo.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Form1_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Upload.End
+
+Program.Sub.Comments.Start
+${$0$}$GCG_BarCodeWo$}$WAW$}$3/4/2015
+Program.Sub.Comments.End
+
